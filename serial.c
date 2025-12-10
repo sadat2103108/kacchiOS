@@ -4,6 +4,24 @@
 
 #define COM1 0x3F8   /* I/O port base address for COM1 */
 
+/*
+You can find more information here: https://caro.su/msx/ocm_de1/16550.pdf
+
+Your Keyboard
+    ↓
+Terminal (stdin)
+    ↓
+QEMU (-serial stdio)
+    ↓
+Emulated COM1 port (0x3F8)
+    ↓
+serial_getc() reads from COM1
+    ↓
+Your OS receives the character
+
+If you want real keyboard input, you'd need to add a keyboard driver.
+*/
+
 void serial_init(void) {
     outb(COM1 + 1, 0x00);    /* Disable interrupts */
     outb(COM1 + 3, 0x80);    /* Enable DLAB (set baud rate divisor) */
