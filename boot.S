@@ -32,3 +32,5 @@ start:
     cli
     hlt
     jmp .halt
+    
+.section .note.GNU-stack,"",@progbits
