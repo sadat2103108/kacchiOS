@@ -31,8 +31,8 @@ typedef struct pcb {
     uint32_t *stack_base;
     uint32_t *stack_ptr;
 
-    uint32_t priority;
-    uint32_t age;
+    uint32_t priority;    /* 1=highest, 20=lowest */
+    uint32_t age;         /* For aging algorithm */
 
     /* IPC */
     message_t msg_queue[MAX_MESSAGES];
@@ -60,8 +60,10 @@ proc_state_t process_get_state(int pid);
 /* Utilities */
 pcb_t* process_get(int pid);
 int process_current_pid(void);
+uint32_t process_count_active(void);
+void process_list(void);
 
-/* IPC */
+/* IPC - Inter-Process Communication */
 int process_send(int dest_pid, uint32_t value);
 int process_receive(uint32_t *out_value);
 
