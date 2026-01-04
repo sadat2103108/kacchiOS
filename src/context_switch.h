@@ -3,7 +3,7 @@
 
 #include "types.h"
 
-/* Assembly functions for context switching */
+// --- Context Switch Assembly Functions ---
 extern void context_switch_asm(uint32_t **current_sp, uint32_t **next_sp);
 extern void save_context(void);
 extern void restore_context(void);

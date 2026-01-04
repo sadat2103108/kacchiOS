@@ -1,29 +1,25 @@
+// --- Memory Management Implementation ---
 #include "memory.h"
 #include "serial.h"
 #include "string.h"
 
-/* Memory allocation tracking */
+// --- Memory Block Metadata ---
 typedef struct {
     uint32_t size;
     uint8_t is_allocated;
     uint8_t is_stack;
 } mem_block_t;
 
-/* Static kernel heap */
 static uint8_t kernel_heap[KERNEL_HEAP_SIZE];
 
-/* Memory allocation metadata */
 #define MAX_ALLOCS 64
 static mem_block_t alloc_metadata[MAX_ALLOCS];
 static uint32_t alloc_count = 0;
 
-/* Current allocation offset */
 static uint32_t heap_offset = 0;
-
-/* Stack region grows from top of heap downward */
 static uint32_t stack_offset = KERNEL_HEAP_SIZE;
 
-/* Memory statistics */
+// --- Memory Statistics ---
 typedef struct {
     uint32_t total_allocated;
     uint32_t total_freed;
@@ -34,7 +30,7 @@ typedef struct {
 
 static mem_stats_t mem_stats = {0};
 
-/* Initialize memory manager */
+// --- Initialization ---
 void memory_init(void)
 {
     heap_offset = 0;
@@ -59,13 +55,12 @@ void memory_init(void)
     serial_puts("KB)\n");
 }
 
-/* Align size to 4 bytes for optimization */
+// --- Helper Functions ---
 static uint32_t align4(uint32_t size)
 {
     return (size + 3) & ~3;
 }
 
-/* Find and track metadata for allocation */
 static int find_metadata_slot(void)
 {
     for (int i = 0; i < MAX_ALLOCS; i++)
@@ -76,7 +71,7 @@ static int find_metadata_slot(void)
     return -1;
 }
 
-/* Optimized heap allocation with metadata tracking */
+// --- Heap Allocation ---
 void* kmalloc(uint32_t size)
 {
     if (size == 0)
@@ -84,7 +79,6 @@ void* kmalloc(uint32_t size)
 
     size = align4(size);
 
-    /* Check fragmentation and available space */
     if (heap_offset + size >= stack_offset)
     {
         serial_puts("[memory] FAIL: heap exhausted (need ");
@@ -94,7 +88,6 @@ void* kmalloc(uint32_t size)
         return 0;
     }
 
-    /* Find metadata slot */
     int meta_idx = find_metadata_slot();
     if (meta_idx < 0)
     {
@@ -105,13 +98,11 @@ void* kmalloc(uint32_t size)
 
     void *ptr = &kernel_heap[heap_offset];
     
-    /* Track allocation */
     alloc_metadata[meta_idx].size = size;
     alloc_metadata[meta_idx].is_allocated = 1;
     alloc_metadata[meta_idx].is_stack = 0;
     alloc_count++;
 
-    /* Update statistics */
     mem_stats.total_allocated += size;
     mem_stats.heap_allocations++;
 
@@ -126,13 +117,12 @@ void* kmalloc(uint32_t size)
     return ptr;
 }
 
-/* Free heap memory with tracking */
+// --- Heap Deallocation ---
 void kfree(void *ptr)
 {
     if (!ptr)
         return;
 
-    /* Find and mark as free */
     for (int i = 0; i < MAX_ALLOCS; i++)
     {
         if (alloc_metadata[i].is_allocated && !alloc_metadata[i].is_stack)
@@ -150,7 +140,7 @@ void kfree(void *ptr)
     serial_puts("[memory] WARNING: double free or invalid ptr\n");
 }
 
-/* Allocate a process stack (top-down) with tracking */
+// --- Stack Allocation ---
 void* alloc_stack(void)
 {
     if (stack_offset < heap_offset + KERNEL_STACK_SIZE)
@@ -160,7 +150,6 @@ void* alloc_stack(void)
         return 0;
     }
 
-    /* Find metadata slot */
     int meta_idx = find_metadata_slot();
     if (meta_idx < 0)
     {
@@ -171,13 +160,11 @@ void* alloc_stack(void)
     stack_offset -= KERNEL_STACK_SIZE;
     void *ptr = &kernel_heap[stack_offset];
 
-    /* Track allocation */
     alloc_metadata[meta_idx].size = KERNEL_STACK_SIZE;
     alloc_metadata[meta_idx].is_allocated = 1;
     alloc_metadata[meta_idx].is_stack = 1;
     alloc_count++;
 
-    /* Update statistics */
     mem_stats.total_allocated += KERNEL_STACK_SIZE;
     mem_stats.stack_allocations++;
 
@@ -190,13 +177,12 @@ void* alloc_stack(void)
     return ptr;
 }
 
-/* Free process stack with tracking */
+// --- Stack Deallocation ---
 void free_stack(void *stack)
 {
     if (!stack)
         return;
 
-    /* Find and mark as free */
     for (int i = 0; i < MAX_ALLOCS; i++)
     {
         if (alloc_metadata[i].is_allocated && alloc_metadata[i].is_stack)
@@ -212,7 +198,7 @@ void free_stack(void *stack)
     }
 }
 
-/* Print memory statistics */
+// --- Statistics ---
 void memory_print_stats(void)
 {
     serial_puts("\n========== MEMORY STATISTICS ==========\n");

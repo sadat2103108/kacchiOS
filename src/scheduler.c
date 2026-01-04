@@ -1,4 +1,4 @@
-/* scheduler.c - Process scheduler with round-robin, aging, and context switching */
+// --- Scheduler Implementation ---
 #include "scheduler.h"
 #include "memory.h"
 #include "serial.h"
@@ -7,7 +7,7 @@
 
 scheduler_t scheduler;
 
-/* Initialize scheduler */
+// --- Initialization ---
 void scheduler_init(void)
 {
     scheduler.current_quantum = DEFAULT_TIME_QUANTUM;
@@ -20,13 +20,12 @@ void scheduler_init(void)
     serial_puts("ms\n");
 }
 
-/* Find next ready process using round-robin with priority consideration */
+// --- Process Selection ---
 pcb_t* scheduler_next(void)
 {
     pcb_t *best = NULL;
     uint32_t best_priority = MAX_PRIORITY + 1;
 
-    /* First pass: find READY process with highest priority (lowest value) */
     for (int i = 0; i < MAX_PROCESSES; i++)
     {
         if (proc_table[i].state == PROC_READY)
@@ -39,7 +38,6 @@ pcb_t* scheduler_next(void)
         }
     }
 
-    /* If no READY process, return NULL */
     if (!best)
     {
         return NULL;
@@ -48,7 +46,7 @@ pcb_t* scheduler_next(void)
     return best;
 }
 
-/* Called on each timer tick */
+// --- Timer Tick Handler ---
 void scheduler_tick(void)
 {
     scheduler.ticks++;
@@ -57,7 +55,6 @@ void scheduler_tick(void)
     {
         scheduler.current_quantum--;
 
-        /* Quantum expired or process blocked - context switch */
         if (scheduler.current_quantum == 0 && current_proc->state == PROC_RUNNING)
         {
             current_proc->state = PROC_READY;
@@ -65,14 +62,13 @@ void scheduler_tick(void)
         }
     }
 
-    /* Apply aging every AGING_THRESHOLD ticks */
     if (scheduler.ticks % AGING_THRESHOLD == 0)
     {
         scheduler_apply_aging();
     }
 }
 
-/* Perform context switch - save current state and load next process */
+// --- Context Switching ---
 void scheduler_context_switch(void)
 {
     pcb_t *next = scheduler_next();
@@ -91,7 +87,6 @@ void scheduler_context_switch(void)
         serial_put_num(next->pid);
         serial_puts("\n");
         
-        /* Call assembly routine to switch contexts */
         context_switch_asm(&current_proc->stack_ptr, &next->stack_ptr);
     }
     else
@@ -100,18 +95,16 @@ void scheduler_context_switch(void)
         serial_put_num(next->pid);
         serial_puts("\n");
         
-        /* Load next process's stack pointer and restore registers */
         context_switch_asm(0, &next->stack_ptr);
     }
 
-    /* Update current process */
     current_proc = next;
     current_proc->state = PROC_RUNNING;
     scheduler.current_quantum = scheduler.time_quantum;
     scheduler.context_switches++;
 }
 
-/* Increase priority of waiting processes (aging) */
+// --- Priority Aging ---
 void scheduler_apply_aging(void)
 {
     uint32_t aged_count = 0;
@@ -122,7 +115,6 @@ void scheduler_apply_aging(void)
         {
             proc_table[i].age++;
 
-            /* Increase priority (lower value = higher priority) every 10 aging cycles */
             if (proc_table[i].age % 10 == 0 && proc_table[i].priority > 1)
             {
                 proc_table[i].priority--;
@@ -139,7 +131,7 @@ void scheduler_apply_aging(void)
     }
 }
 
-/* Set configurable time quantum */
+// --- Configuration ---
 void scheduler_set_quantum(uint32_t quantum)
 {
     if (quantum > 0 && quantum <= 100)
@@ -157,19 +149,17 @@ void scheduler_set_quantum(uint32_t quantum)
     }
 }
 
-/* Get current quantum */
 uint32_t scheduler_get_quantum(void)
 {
     return scheduler.time_quantum;
 }
 
-/* Get context switch count */
 uint32_t scheduler_get_switches(void)
 {
     return scheduler.context_switches;
 }
 
-/* Print scheduler statistics */
+// --- Statistics ---
 void scheduler_print_stats(void)
 {
     serial_puts("\n========== SCHEDULER STATISTICS ==========\n");

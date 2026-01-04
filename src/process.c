@@ -1,3 +1,4 @@
+// --- Process Management Implementation ---
 #include "process.h"
 #include "memory.h"
 #include "serial.h"
@@ -8,7 +9,7 @@ pcb_t *current_proc = 0;
 static uint32_t next_pid = 1;
 static uint32_t process_count = 0;
 
-/* Find free process table slot */
+// --- Utility Functions ---
 static int find_free_slot(void) {
     for (int i = 0; i < MAX_PROCESSES; i++) {
         if (proc_table[i].state == PROC_UNUSED)
@@ -17,25 +18,22 @@ static int find_free_slot(void) {
     return -1;
 }
 
-/* Initialize stack so first context switch "returns" into entry */
 static uint32_t* init_stack(void *stack_top, void (*entry)(void)) {
     uint32_t *sp = (uint32_t*)stack_top;
 
-    /* Push registers in reverse order of restoration (EAX, EBX, ECX, EDX, ESI, EDI, EBP) */
-    *(--sp) = 0;                        /* EAX */
-    *(--sp) = 0;                        /* EBX */
-    *(--sp) = 0;                        /* ECX */
-    *(--sp) = 0;                        /* EDX */
-    *(--sp) = 0;                        /* ESI */
-    *(--sp) = 0;                        /* EDI */
-    *(--sp) = 0;                        /* EBP */
-    *(--sp) = (uint32_t)entry;          /* Return address (process entry point) */
+    *(--sp) = 0;
+    *(--sp) = 0;
+    *(--sp) = 0;
+    *(--sp) = 0;
+    *(--sp) = 0;
+    *(--sp) = 0;
+    *(--sp) = 0;
+    *(--sp) = (uint32_t)entry;
 
     return sp;
 }
 
-/* ---------- API IMPLEMENTATION ---------- */
-
+// --- Initialization ---
 void process_init(void) {
     for (int i = 0; i < MAX_PROCESSES; i++) {
         proc_table[i].state = PROC_UNUSED;
@@ -51,7 +49,7 @@ void process_init(void) {
     serial_puts(" processes)\n");
 }
 
-/* Create a new process with priority */
+// --- Process Creation and Termination ---
 int process_create(void (*entry)(void), uint32_t priority) {
     int slot = find_free_slot();
     if (slot < 0) {
@@ -88,7 +86,6 @@ int process_create(void (*entry)(void), uint32_t priority) {
     return p->pid;
 }
 
-/* Terminate current process */
 void process_exit(void) {
     if (!current_proc) {
         serial_puts("[process] ERROR: no current process\n");
@@ -104,11 +101,9 @@ void process_exit(void) {
 
     if (process_count > 0)
         process_count--;
-
-    /* Scheduler will pick next */
 }
 
-/* State transition with validation */
+// --- State Management ---
 void process_set_state(int pid, proc_state_t state) {
     pcb_t *p = process_get(pid);
     if (!p) {
@@ -118,7 +113,6 @@ void process_set_state(int pid, proc_state_t state) {
 
     p->state = state;
 
-    /* Log state transitions */
     serial_puts("[process] PID ");
     serial_put_num(pid);
     serial_puts(" state changed\n");
@@ -131,9 +125,7 @@ proc_state_t process_get_state(int pid) {
     return p->state;
 }
 
-/* ---------- UTILITIES ---------- */
-
-/* Get PCB by PID */
+// --- Process Utilities ---
 pcb_t* process_get(int pid) {
     for (int i = 0; i < MAX_PROCESSES; i++) {
         if (proc_table[i].pid == (uint32_t)pid)
@@ -142,14 +134,12 @@ pcb_t* process_get(int pid) {
     return 0;
 }
 
-/* Get current process PID */
 int process_current_pid(void) {
     if (!current_proc)
         return -1;
     return current_proc->pid;
 }
 
-/* Get process count */
 uint32_t process_count_active(void) {
     uint32_t count = 0;
     for (int i = 0; i < MAX_PROCESSES; i++) {
@@ -159,7 +149,6 @@ uint32_t process_count_active(void) {
     return count;
 }
 
-/* List all processes */
 void process_list(void) {
     serial_puts("\n========== PROCESS TABLE ==========\n");
     
@@ -171,7 +160,6 @@ void process_list(void) {
             serial_put_num(proc_table[i].pid);
             serial_puts(": state=");
             
-            /* Print state name */
             switch (proc_table[i].state) {
                 case PROC_READY:      serial_puts("READY"); break;
                 case PROC_RUNNING:    serial_puts("RUNNING"); break;
@@ -192,9 +180,7 @@ void process_list(void) {
     serial_puts("===================================\n\n");
 }
 
-/* ---------- IPC IMPLEMENTATION ---------- */
-
-/* Send message to another process */
+// --- Inter-Process Communication ---
 int process_send(int dest_pid, uint32_t value) {
     if (!current_proc) {
         serial_puts("[IPC] ERROR: no current process\n");
@@ -225,7 +211,6 @@ int process_send(int dest_pid, uint32_t value) {
     return 0;
 }
 
-/* Receive message from message queue */
 int process_receive(uint32_t *out_value) {
     if (!current_proc) {
         serial_puts("[IPC] ERROR: no current process\n");
@@ -239,7 +224,6 @@ int process_receive(uint32_t *out_value) {
 
     *out_value = current_proc->msg_queue[0].value;
 
-    /* Shift queue */
     for (uint32_t i = 1; i < current_proc->msg_count; i++)
         current_proc->msg_queue[i - 1] = current_proc->msg_queue[i];
 

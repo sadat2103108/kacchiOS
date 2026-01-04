@@ -1,4 +1,3 @@
-/* kernel.c - Main kernel with memory, process, and scheduler management */
 #include "types.h"
 #include "serial.h"
 #include "string.h"
@@ -7,7 +6,7 @@
 #include "scheduler.h"
 #define MAX_INPUT 128
 
-/* Test processes */
+// --- Test Processes ---
 void worker_process_high(void)
 {
     serial_puts("[P-HIGH] high priority process started\n");
@@ -36,7 +35,6 @@ void worker_process_low(void)
     process_exit();
 }
 
-/* Simple test process that doesn't actually run */
 void test_simple_process(void)
 {
     serial_puts("[test-proc] process running\n");
@@ -47,7 +45,6 @@ void ipc_test_sender(void)
 {
     serial_puts("[IPC-SEND] sender process started\n");
     
-    /* Find a receiver process (PID 2 if exists) */
     for (int i = 0; i < 3; i++)
     {
         int result = process_send(2, 100 + i);
@@ -76,7 +73,7 @@ void ipc_test_receiver(void)
     process_exit();
 }
 
-/* Comprehensive memory tests */
+// --- Memory Tests ---
 void test_memory_manager(void)
 {
     serial_puts("\n========== MEMORY TEST ==========\n");
@@ -109,7 +106,7 @@ void test_memory_manager(void)
     memory_print_stats();
 }
 
-/* Comprehensive process tests */
+// --- Process Tests ---
 void test_process_manager(void)
 {
     serial_puts("\n========== PROCESS TEST ==========\n");
@@ -141,7 +138,7 @@ void test_process_manager(void)
     process_list();
 }
 
-/* Test scheduler */
+// --- Scheduler Tests ---
 void test_scheduler(void)
 {
     serial_puts("\n========== SCHEDULER TEST ==========\n");
@@ -178,7 +175,7 @@ void test_scheduler(void)
     scheduler_print_stats();
 }
 
-/* Test IPC */
+// --- IPC Tests ---
 void test_ipc(void)
 {
     serial_puts("\n========== IPC TEST ==========\n");
@@ -203,27 +200,24 @@ void test_ipc(void)
         serial_puts("[OK] Message received\n");
 }
 
+// --- Main Kernel Entry ---
 void kmain(void)
 {
     char input[MAX_INPUT];
     int pos = 0;
 
-    /* Initialize hardware and subsystems */
     serial_init();
     serial_puts("\n[BOOT] Initializing kacchiOS...\n");
 
-    /* Initialize managers */
     memory_init();
     process_init();
     scheduler_init();
 
-    /* Run comprehensive tests */
     test_memory_manager();
     test_process_manager();
     test_scheduler();
     test_ipc();
 
-    /* Print welcome message */
     serial_puts("\n");
     serial_puts("========================================\n");
     serial_puts("    kacchiOS - Full Featured OS\n");
@@ -232,31 +226,26 @@ void kmain(void)
     serial_puts("System initialized successfully!\n");
     serial_puts("Type 'help' for commands\n\n");
 
-    /* Main loop - the "null process" */
     while (1)
     {
         serial_puts("kacchiOS> ");
         pos = 0;
 
-        /* Read input line */
         while (1)
         {
             char c = serial_getc();
 
-            /* Handle Enter key */
             if (c == '\r' || c == '\n')
             {
                 input[pos] = '\0';
                 serial_puts("\n");
                 break;
             }
-            /* Handle Backspace */
             else if ((c == '\b' || c == 0x7F) && pos > 0)
             {
                 pos--;
                 serial_puts("\b \b");
             }
-            /* Handle normal characters */
             else if (c >= 32 && c < 127 && pos < MAX_INPUT - 1)
             {
                 input[pos++] = c;
@@ -264,7 +253,7 @@ void kmain(void)
             }
         }
 
-        /* Process commands */
+        // --- Command Processing ---
         if (pos > 0)
         {
             if (input[0] == 'h' && input[1] == 'e' && input[2] == 'l' && input[3] == 'p')
