@@ -12,16 +12,19 @@
 /* Initialize memory manager */
 void memory_init(void);
 
-/* Heap allocation */
+/* Heap allocation with metadata tracking and optimization */
 void* kmalloc(uint32_t size);
 
-/* Heap free (stub for now) */
+/* Heap deallocation with tracking */
 void kfree(void *ptr);
 
 /* Stack allocation for processes */
 void* alloc_stack(void);
 
-/* Stack deallocation (stub for now) */
+/* Stack deallocation with tracking */
 void free_stack(void *stack);
+
+/* Print memory statistics and usage */
+void memory_print_stats(void);
 
 #endif
