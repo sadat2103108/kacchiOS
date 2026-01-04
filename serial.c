@@ -50,6 +50,25 @@ void serial_puts(const char* str) {
     }
 }
 
+/* Print unsigned 32-bit number */
+void serial_put_num(uint32_t num) {
+    char buffer[12];
+    int idx = 11;
+    buffer[11] = '\0';
+
+    if (num == 0) {
+        serial_putc('0');
+        return;
+    }
+
+    while (num > 0 && idx > 0) {
+        buffer[--idx] = '0' + (num % 10);
+        num /= 10;
+    }
+
+    serial_puts(&buffer[idx]);
+}
+
 static int serial_received(void) {
     return inb(COM1 + 5) & 0x01;
 }
